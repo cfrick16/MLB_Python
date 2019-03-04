@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+import sys
 import re
+import Analysis
 #    0      1    2     3    4    5         6           7          8          9
-# [Inning, Top, Outs, 1st, 2nd, 3rd, Home_team_lead, Runs, Home_team_wins, Play]
+# [Inning, Half, Outs, 1st, 2nd, 3rd, Home_team_lead, Runs, Home_team_wins, Play]
 situations = [[]]
 
 def add_run(score_multiplier, sit):
@@ -22,7 +24,7 @@ def play_parser(full_play,sit, score_multiplier) -> bool :
 	if(advances != "N") :
 		bases = advances.split(';')
 		for b in bases :
-			if(b[0] != "B") : 
+			if(b[0] != "B") :
 				sit[int(b[0]) + 2] = False
 			if 'X' in b and 'E' not in b:
 				out_recorded = out_recorded + 1
@@ -59,8 +61,8 @@ def play_parser(full_play,sit, score_multiplier) -> bool :
 			if("(E" not in play):
 				sit[2] = sit[2] + 1 - out_recorded
 		else :
-			if(play[0:2] != "NP" and play[0:3] != "FLE" and 
-				play[0:2] != "OA" and play[0:2] !="PB" 
+			if(play[0:2] != "NP" and play[0:3] != "FLE" and
+				play[0:2] != "OA" and play[0:2] !="PB"
 				and play[0:2] != "BK"):
 				print(play[0:2])
 			return advances != "N"
@@ -84,7 +86,7 @@ def game_parser(plays, home_team_wins) :
 			sit[4] = False
 			sit[5] = False
 
-		if(play_parser(x[2], sit, (-1, 1)[int(x[1])]) or True):
+		if(play_parser(x[2], sit, (-1, 1)[int(x[1])])):
 			situations.append(sit)
 
 
@@ -94,8 +96,6 @@ def team_parser(contents, home_lineup) :
 	once = False # TODO: Delete
 	i = 0
 	while(len(contents) > i) :
-		if(contents[0] == "id"):
-			print(contents[1])
 		home_team_wins = False
 		line = contents[i].split(',')
 		if(line[1] == "wp") :
@@ -118,36 +118,69 @@ def team_parser(contents, home_lineup) :
 
 if __name__ == "__main__":
 
+	year = "2017"
+	num_args = len(sys.argv)
+	if(num_args > 1):
+		year = sys.argv[1]
+
 	situations.pop()
 	team_lineup = []
 
 	nl_teams = ("ARI", "ATL", "CHN", "CIN", "COL", "LAN", "MIA", "MIL", "NYN",
 		"PHI", "PIT", "SDN", "SFN", "SLN", "WAS")
-	al_teams = ("ANA", "BAL", "BOS", "CHA", "CLE", "DET", "HOU", "KCA", "MIN", 
+	al_teams = ("ANA", "BAL", "BOS", "CHA", "CLE", "DET", "HOU", "KCA", "MIN",
 		"NYA", "OAK", "SEA", "TBA", "TEX", "TOR")
 
 	for team in nl_teams :
-		team_file=open("2017eve/"+ team + "2017.ROS", "r").readlines()
+		team_file=open("Retrosheet/" + year + "eve/"+ team + year + ".ROS", "r").readlines()
 		for line in team_file:
 			team_lineup.append(line.split(',')[0])
 
-		f=open("2017eve/2017" + team + ".EVN", "r")
+		f=open("Retrosheet/" + year + "eve/" + year + team + ".EVN", "r")
 		contents = f.readlines()
 		team_parser(contents, team_lineup)
 
 
 	for team in al_teams :
-		team_file=open("2017eve/"+ team + "2017.ROS", "r").readlines()
+		team_file=open("Retrosheet/" + year + "eve/"+ team + year + ".ROS", "r").readlines()
 		for line in team_file:
 			team_lineup.append(line.split(',')[0])
 
-		f=open("2017eve/2017" + team + ".EVA", "r")
+		f=open("Retrosheet/" + year + "eve/" + year + team + ".EVA", "r")
 		contents = f.readlines()
 		team_parser(contents, team_lineup)
 
 
 
 
+	out_csv = open("Sits/" + year + 'Sits.csv', 'a')
 
-	# for x in situations:
-	# 	print(x)
+	orig_stdout = sys.stdout
+	sys.stdout = out_csv
+	#print("Inning, Half, Outs, 1st, 2nd, 3rd, Lead, Runs, Win")
+	for sit in situations:
+		i = 0
+		for x in sit:
+			i = i + 1
+			if(i == 9):
+				print(int(x))
+			elif(i == 6):
+				if(int(x) <  -10):
+					sys.stdout.write("-10 ,")
+				elif(int(x) < -4):
+					sys.stdout.write("-4 ,")
+				elif(int(x) > 10):
+					sys.stdout.write("10 ,")
+				elif(int(x) > 4):
+					sys.stdout.write("4 ,")
+				else:
+					sys.stdout.write(str(int(x)) + ",")
+			elif(i == 2):
+				sys.stdout.write(str(int(x == 'Bot')) + ",")
+			elif(i < 9):
+				sys.stdout.write(str(int(x)) + ",")
+
+	sys.stdout = orig_stdout
+
+	if(len(sys.argv) > 2 and sys.argv[2] == True):
+		Analysis.main([year])

@@ -1,0 +1,6 @@
+In order to run an analysis for 2016:
+        //This creates a sit file that contains all the situations and results in an array format for 2016
+	python Mlb.py 2016
+	// This performs a decision tree and tests its accuracy
+	python Analysis.py 2016
+	
